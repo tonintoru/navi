@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>工場ナビ プロトタイプ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .leaflet-popup-content-wrapper {
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([35.681236, 139.767125], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    map.locate({ setView: true, maxZoom: 18 });
+
+    map.on('locationfound', function (e) {
+      L.marker(e.latlng).addTo(map).bindPopup(\"あなたの現在地\").openPopup();
+      const destinationLatLng = [35.682839, 139.759455];
+      L.marker(destinationLatLng).addTo(map).bindPopup(\"イベントブースA\");
+      L.polyline([e.latlng, destinationLatLng], { color: 'blue' }).addTo(map);
+    });
+
+    map.on('locationerror', function (e) {
+      alert(\"現在地を取得できませんでした: \" + e.message);
+    });
+  </script>
+</body>
+</html>
