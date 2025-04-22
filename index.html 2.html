@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>工場ナビ プロトタイプ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map {
+      height: 90vh;
+      width: 100%;
+    }
+    #controls {
+      padding: 1em;
+      text-align: center;
+    }
+    select {
+      font-size: 1.2em;
+      padding: 0.4em;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="destination">目的地を選んでください：</label>
+    <select id="destination">
+      <option value="">--選択してください--</option>
+      <option value="ブースA">イベントブースA</option>
+      <option value="トイレ">トイレ</option>
+      <option value="受付">受付</option>
+    </select>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([35.681236, 139.767125], 17);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let userMarker = null;
+    let routeLine = null;
+    let goalMarker = null;
+    let userLatLng = null;
+
+    const destinations = {
+      "ブースA": [35.682839, 139.759455],
+      "トイレ": [35.680856, 139.766987],
+      "受付": [35.681828, 139.768212]
+    };
+
+    const destinationSelect = document.getElementById('destination');
+
+    function drawRoute(destLatLng, label) {
+      if (goalMarker) map.removeLayer(goalMarker);
+      goalMarker = L.marker(destLatLng).addTo(map).bindPopup(label).openPopup();
+
+      if (routeLine) map.removeLayer(routeLine);
+      routeLine = L.polyline([userLatLng, destLatLng], { color: 'blue' }).addTo(map);
+    }
+
+    destinationSelect.addEventListener('change', function () {
+      const selected = this.value;
+      if (!selected || !destinations[selected] || !userLatLng) return;
+      drawRoute(destinations[selected], selected);
+    });
+
+    map.locate({ setView: true, maxZoom: 18 });
+
+    map.on('locationfound', function (e) {
+      userLatLng = e.latlng;
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker(userLatLng).addTo(map).bindPopup("あなたの現在地").openPopup();
+    });
+
+    map.on('locationerror', function (e) {
+      alert("現在地を取得できませんでした: " + e.message);
+    });
+  </script>
+</body>
+</html>
