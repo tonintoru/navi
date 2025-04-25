@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>工場ナビ プロトタイプ</title>
+  <title>工場ナビ（寄居工場 スマホ完全ロック）</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
@@ -35,11 +35,41 @@
   <div id="map"></div>
 
   <script>
-    const map = L.map('map').setView([35.681236, 139.767125], 17);
+    const bounds = [
+      [36.1175, 139.1915], // 南西
+      [36.1191, 139.1944]  // 北東
+    ];
+
+    const map = L.map('map', {
+      center: [36.11833, 139.19297],
+      zoom: 18,
+      minZoom: 18,
+      maxZoom: 20,
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      touchZoom: false,         // ← スマホピンチズーム禁止！
+      dragging: true
+    });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
+
+    map.on('moveend', () => {
+      if (!boundsContain(map.getCenter())) {
+        map.panInsideBounds(bounds, { animate: true });
+      }
+    });
+
+    function boundsContain(center) {
+      return (
+        center.lat >= bounds[0][0] && center.lat <= bounds[1][0] &&
+        center.lng >= bounds[0][1] && center.lng <= bounds[1][1]
+      );
+    }
 
     let userMarker = null;
     let routeLine = null;
@@ -47,25 +77,30 @@
     let userLatLng = null;
 
     const destinations = {
-      "ブースA": [35.682839, 139.759455],
-      "トイレ": [35.680856, 139.766987],
-      "受付": [35.681828, 139.768212]
+      "ブースA": [36.1186, 139.1925],
+      "トイレ": [36.1181, 139.1919],
+      "受付": [36.1189, 139.1933]
     };
-
-    const destinationSelect = document.getElementById('destination');
 
     function drawRoute(destLatLng, label) {
       if (goalMarker) map.removeLayer(goalMarker);
       goalMarker = L.marker(destLatLng).addTo(map).bindPopup(label).openPopup();
 
       if (routeLine) map.removeLayer(routeLine);
-      routeLine = L.polyline([userLatLng, destLatLng], { color: 'blue' }).addTo(map);
+      if (userLatLng) {
+        routeLine = L.polyline([userLatLng, destLatLng], { color: 'blue' }).addTo(map);
+      }
     }
 
-    destinationSelect.addEventListener('change', function () {
-      const selected = this.value;
-      if (!selected || !destinations[selected] || !userLatLng) return;
+    function onDestinationChange() {
+      const select = document.getElementById('destination');
+      const selected = select.options[select.selectedIndex].value;
+      if (!selected || !destinations[selected]) return;
       drawRoute(destinations[selected], selected);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('destination').addEventListener('change', onDestinationChange);
     });
 
     map.locate({ setView: true, maxZoom: 18 });
