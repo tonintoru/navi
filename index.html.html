@@ -2,30 +2,49 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>工場ナビ（本田技研 寄居工場 完全ロック版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>工場ナビ（スマホ対応版）</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    #map {
-      height: 90vh;
-      width: 100%;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      font-family: sans-serif;
+      background: #fff;
+      overflow: hidden;
     }
     #controls {
-      padding: 1em;
-      text-align: center;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: white;
+      padding: 0.5em 1em;
+      border-radius: 1em;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
     }
     select {
-      font-size: 1.2em;
-      padding: 0.4em;
+      font-size: 1em;
+      padding: 0.3em;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      touch-action: none;
     }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label for="destination">目的地を選んでください：</label>
+    <label for="destination">目的地：</label>
     <select id="destination">
-      <option value="">--選択してください--</option>
+      <option value="">--選択--</option>
       <option value="ブースA">イベントブースA</option>
       <option value="トイレ">トイレ</option>
       <option value="受付">受付</option>
@@ -36,8 +55,8 @@
 
   <script>
     const bounds = [
-      [36.1175, 139.1915], // 南西
-      [36.1191, 139.1944]  // 北東
+      [36.1175, 139.1915],
+      [36.1191, 139.1944]
     ];
 
     const map = L.map('map', {
@@ -47,9 +66,11 @@
       maxZoom: 20,
       maxBounds: bounds,
       maxBoundsViscosity: 1.0,
+      zoomControl: false,
       scrollWheelZoom: false,
       doubleClickZoom: false,
       boxZoom: false,
+      touchZoom: false,
       dragging: true
     });
 
@@ -58,22 +79,21 @@
     }).addTo(map);
 
     map.on('moveend', () => {
-      if (!boundsContain(map.getCenter())) {
-        map.panInsideBounds(bounds, { animate: true });
-      }
-    });
-
-    function boundsContain(center) {
-      return (
+      const center = map.getCenter();
+      const inBounds = (
         center.lat >= bounds[0][0] && center.lat <= bounds[1][0] &&
         center.lng >= bounds[0][1] && center.lng <= bounds[1][1]
       );
-    }
+      if (!inBounds) {
+        map.panInsideBounds(bounds, { animate: true });
+      }
+    });
 
     let userMarker = null;
     let routeLine = null;
     let goalMarker = null;
     let userLatLng = null;
+    let destinationSelected = null;
 
     const destinations = {
       "ブースA": [36.1186, 139.1925],
@@ -91,15 +111,14 @@
       }
     }
 
-    function onDestinationChange() {
-      const select = document.getElementById('destination');
-      const selected = select.options[select.selectedIndex].value;
-      if (!selected || !destinations[selected]) return;
-      drawRoute(destinations[selected], selected);
+    function applyDestination() {
+      if (!destinationSelected || !destinations[destinationSelected]) return;
+      drawRoute(destinations[destinationSelected], destinationSelected);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('destination').addEventListener('change', onDestinationChange);
+    document.getElementById('destination').addEventListener('change', function () {
+      destinationSelected = this.value;
+      applyDestination();
     });
 
     map.locate({ setView: true, maxZoom: 18 });
@@ -108,6 +127,7 @@
       userLatLng = e.latlng;
       if (userMarker) map.removeLayer(userMarker);
       userMarker = L.marker(userLatLng).addTo(map).bindPopup("あなたの現在地").openPopup();
+      applyDestination();
     });
 
     map.on('locationerror', function (e) {
