@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>工場ナビ（寄居工場 スマホ最適化）</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map {
+      height: 90vh;
+      width: 100%;
+      touch-action: none; /* ← スマホ操作制限 */
+    }
+    #controls {
+      padding: 1em;
+      text-align: center;
+    }
+    select {
+      font-size: 1.2em;
+      padding: 0.4em;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="destination">目的地を選んでください：</label>
+    <select id="destination">
+      <option value="">--選択してください--</option>
+      <option value="ブースA">イベントブースA</option>
+      <option value="トイレ">トイレ</option>
+      <option value="受付">受付</option>
+    </select>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    const bounds = [
+      [36.1175, 139.1915],
+      [36.1191, 139.1944]
+    ];
+
+    const map = L.map('map', {
+      center: [36.11833, 139.19297],
+      zoom: 18,
+      minZoom: 18,
+      maxZoom: 20,
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0,
+      zoomControl: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      touchZoom: false,
+      dragging: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    function boundsContain(center) {
+      return (
+        center.lat >= bounds[0][0] && center.lat <= bounds[1][0] &&
+        center.lng >= bounds[0][1] && center.lng <= bounds[1][1]
+      );
+    }
+
+    map.on('moveend', () => {
+      if (!boundsContain(map.getCenter())) {
+        map.panInsideBounds(bounds, { animate: true });
+      }
+    });
+
+    let userMarker = null;
+    let routeLine = null;
+    let goalMarker = null;
+    let userLatLng = null;
+    let destinationSelected = null;
+
+    const destinations = {
+      "ブースA": [36.1186, 139.1925],
+      "トイレ": [36.1181, 139.1919],
+      "受付": [36.1189, 139.1933]
+    };
+
+    function drawRoute(destLatLng, label) {
+      if (goalMarker) map.removeLayer(goalMarker);
+      goalMarker = L.marker(destLatLng).addTo(map).bindPopup(label).openPopup();
+
+      if (routeLine) map.removeLayer(routeLine);
+      if (userLatLng) {
+        routeLine = L.polyline([userLatLng, destLatLng], { color: 'blue' }).addTo(map);
+      }
+    }
+
+    function applyDestination() {
+      if (!destinationSelected || !destinations[destinationSelected]) return;
+      drawRoute(destinations[destinationSelected], destinationSelected);
+    }
+
+    document.getElementById('destination').addEventListener('change', function () {
+      destinationSelected = this.value;
+      applyDestination();
+    });
+
+    map.locate({ setView: true, maxZoom: 18 });
+
+    map.on('locationfound', function (e) {
+      userLatLng = e.latlng;
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker(userLatLng).addTo(map).bindPopup("あなたの現在地").openPopup();
+      applyDestination();
+    });
+
+    map.on('locationerror', function (e) {
+      alert("現在地を取得できませんでした: " + e.message);
+    });
+  </script>
+</body>
+</html>
